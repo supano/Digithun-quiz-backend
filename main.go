@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-
+	"time"
+	"github.com/dgrijalva/jwt-go"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
 )
@@ -44,6 +45,7 @@ func main() {
 	defer dbCon.Database.Close()
 
 	e.GET("/", hello)
+	e.POST("/login", login)
 	e.GET("/users", getUsers)
 	e.GET("/users/:id", getUser)
 	e.POST("/users", addUser)
@@ -54,6 +56,36 @@ func main() {
 
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello world")
+}
+
+func login(c echo.Context) error {
+	var request struct {
+		Email string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusUnauthorized, "Email or password incorrect")
+	}
+
+	if request.Email == "supano1995@gmail.com" && request.Password == "q1w2e3r4"{
+		token := jwt.New(jwt.SigningMethodHS256)
+
+		claims := token.Claims.(jwt.MapClaims)
+		claims["name"] = "Supachai Suthikeeree"
+		claims["email"] = "supano1995@gmail.com"
+		claims["exp"] = time.Now().Add(time.Hour).Unix()
+
+		t, err := token.SignedString([]byte("secret"))
+		if err != nil {
+			return c.JSON(http.StatusUnauthorized, "Email or password incorrect")
+		}
+
+		return c.JSON(http.StatusOK, map[string]string{
+			"token": t,
+		})
+	} 
+
+	return c.JSON(http.StatusUnauthorized, "Email or password incorrect")
 }
 
 func getUser(c echo.Context) error {
