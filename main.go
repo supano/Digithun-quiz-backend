@@ -67,7 +67,26 @@ func login(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, "Email or password incorrect")
 	}
 
-	if request.Email == "supano1995@gmail.com" && request.Password == "q1w2e3r4"{
+	rows, err := dbCon.Database.Query("select email, password from users where email = ?", request.Email)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ResponseJson{
+			Message: "Not Found",
+		})
+	}
+	defer rows.Close()
+
+	var (
+		email  string
+		password string
+		user User
+	)
+
+	for rows.Next() {
+		rows.Scan(&email, &password)
+		user = User{Email: email, Password: password}
+	}
+
+	if request.Email == user.Email && request.Password == user.Password {
 		token := jwt.New(jwt.SigningMethodHS256)
 
 		claims := token.Claims.(jwt.MapClaims)
@@ -142,7 +161,7 @@ func getUser(c echo.Context) error {
 }
 
 func getUsers(c echo.Context) error {
-	rows, err := dbCon.Database.Query("select * from users")
+	rows, err := dbCon.Database.Query("select id, name, email, password from users")
 	if err != nil {
 		return c.JSON(http.StatusNotFound, ResponseJson{
 			Message: "Not Found",
@@ -187,7 +206,7 @@ func addUser(c echo.Context) error {
 
 	// users := append(users, &u)
 
-	stmt, err := dbCon.Database.Prepare("INSERT INTO users(email, name, password) VALUES(?, ?, ?)")
+	stmt, err := dbCon.Database.Prepare("INSERT INTO users(name, email, password) VALUES(?, ?, ?)")
 	if err != nil {
 		log.Fatal(err)
 	}
