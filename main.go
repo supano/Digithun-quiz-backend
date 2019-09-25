@@ -21,6 +21,11 @@ type ResponseJson struct {
 	Data    []User
 }
 
+type ResponseJsonSingle struct {
+	Message string
+	Data    *User
+}
+
 type DatabaseCon struct {
 	Database *sql.DB
 }
@@ -44,9 +49,61 @@ func main() {
 
 	e.GET("/users", getUsers)
 
+	e.GET("/users/:id", getUser)
+
 	e.POST("/users", addUser)
 
 	e.Logger.Fatal(e.Start(":9000"))
+}
+
+func getUser(c echo.Context) error {
+
+	var count int
+	rowCount, err := dbCon.Database.Query("select count(id) from users where id = ?", c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ResponseJson{
+			Message: "Not Found",
+		})
+	}
+	for rowCount.Next() {
+		rowCount.Scan(&count)
+	}
+
+	if count < 1 {
+		return c.JSON(http.StatusNotFound, ResponseJson{
+			Message: "Not Found",
+		})
+	}
+
+	rows, err := dbCon.Database.Query("select id, name, email from users where id = ?", c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ResponseJson{
+			Message: "Not Found",
+		})
+	}
+	defer rows.Close()
+
+	var (
+		id    int
+		name  string
+		email string
+		user  User
+	)
+
+	for rows.Next() {
+		rows.Scan(&id, &name, &email)
+		user = User{
+			ID:    id,
+			Name:  name,
+			Email: email,
+		}
+	}
+
+	return c.JSON(http.StatusOK, ResponseJsonSingle{
+		Message: "Success",
+		Data:    &user,
+	})
+
 }
 
 func getUsers(c echo.Context) error {
@@ -75,16 +132,16 @@ func getUsers(c echo.Context) error {
 		})
 	}
 
-	if len(users) > 0 {
-		return c.JSON(http.StatusOK, ResponseJson{
-			Message: "Success",
-			Data:    users,
-		})
-	} else {
+	if len(users) == 0 {
 		return c.JSON(http.StatusNotFound, ResponseJson{
 			Message: "Not Found",
 		})
 	}
+
+	return c.JSON(http.StatusOK, ResponseJson{
+		Message: "Success",
+		Data:    users,
+	})
 }
 
 func addUser(c echo.Context) error {
@@ -100,21 +157,18 @@ func addUser(c echo.Context) error {
 		log.Fatal(err)
 	}
 
-	type res struct {
-		Message string
-		Data    *User
-	}
+	result, err := stmt.Exec(u.Name, u.Email, u.Password)
 
-	_, err = stmt.Exec(u.Name, u.Email, u.Password)
+	id, _ := result.LastInsertId()
+	u.ID = int(id)
+
 	if err != nil {
-		return c.JSON(http.StatusOK, struct {
-			Message string
-		}{
+		return c.JSON(http.StatusOK, ResponseJsonSingle{
 			Message: "Error",
 		})
 	}
 
-	return c.JSON(http.StatusOK, &res{
+	return c.JSON(http.StatusOK, ResponseJsonSingle{
 		Message: "Success",
 		Data:    u,
 	})
