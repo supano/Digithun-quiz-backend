@@ -43,17 +43,17 @@ func main() {
 
 	defer dbCon.Database.Close()
 
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello world")
-	})
-
+	e.GET("/", hello)
 	e.GET("/users", getUsers)
-
 	e.GET("/users/:id", getUser)
-
 	e.POST("/users", addUser)
+	e.PATCH("/users/:id", editUser)
 
 	e.Logger.Fatal(e.Start(":9000"))
+}
+
+func hello(c echo.Context) error {
+	return c.String(http.StatusOK, "Hello world")
 }
 
 func getUser(c echo.Context) error {
@@ -65,6 +65,9 @@ func getUser(c echo.Context) error {
 			Message: "Not Found",
 		})
 	}
+
+	defer rowCount.Close()
+
 	for rowCount.Next() {
 		rowCount.Scan(&count)
 	}
@@ -158,6 +161,7 @@ func addUser(c echo.Context) error {
 	}
 
 	result, err := stmt.Exec(u.Name, u.Email, u.Password)
+	defer stmt.Close()
 
 	id, _ := result.LastInsertId()
 	u.ID = int(id)
@@ -172,4 +176,49 @@ func addUser(c echo.Context) error {
 		Message: "Success",
 		Data:    u,
 	})
+}
+
+func editUser(c echo.Context) error {
+	u := new(User)
+	if err := c.Bind(u); err != nil {
+		return err
+	}
+
+	var (
+		err error
+	)
+	rows, err := dbCon.Database.Query("UPDATE users SET name = ? WHERE id = ?", u.Name, c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusOK, ResponseJsonSingle{
+			Message: "Error",
+		})
+	}
+
+	defer rows.Close()
+
+	result, err := dbCon.Database.Query("SELECT id, name, email FROM users WHERE id = ?", c.Param("id"))
+
+	defer result.Close()
+
+	var (
+		id    int
+		name  string
+		email string
+		user  User
+	)
+
+	for result.Next() {
+		result.Scan(&id, &name, &email)
+		user = User{
+			ID:    id,
+			Name:  name,
+			Email: email,
+		}
+	}
+
+	return c.JSON(http.StatusOK, ResponseJsonSingle{
+		Message: "Success",
+		Data:    &user,
+	})
+
 }
