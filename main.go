@@ -242,7 +242,25 @@ func addUser(c echo.Context) error {
 		return err
 	}
 
-	// users := append(users, &u)
+	var count int
+	rowCount, err := dbCon.Database.Query("select count(id) from users where email = ?", u.Email)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, ResponseJson{
+			Message: "Error",
+		})
+	}
+
+	defer rowCount.Close()
+
+	for rowCount.Next() {
+		rowCount.Scan(&count)
+	}
+
+	if count > 0 {
+		return c.JSON(http.StatusBadRequest, ResponseJson{
+			Message: "This Email is already in use",
+		})
+	}
 
 	stmt, err := dbCon.Database.Prepare("INSERT INTO users(name, email, password) VALUES(?, ?, ?)")
 	if err != nil {
