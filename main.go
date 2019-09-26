@@ -5,9 +5,12 @@ import (
 	"log"
 	"net/http"
 	"time"
+
 	"github.com/dgrijalva/jwt-go"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 )
 
 type User struct {
@@ -31,6 +34,13 @@ type DatabaseCon struct {
 	Database *sql.DB
 }
 
+type CustomClaims struct {
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	jwt.StandardClaims
+}
+
 var dbCon DatabaseCon
 
 func main() {
@@ -46,10 +56,19 @@ func main() {
 
 	e.GET("/", hello)
 	e.POST("/login", login)
-	e.GET("/users", getUsers)
-	e.GET("/users/:id", getUser)
-	e.POST("/users", addUser)
-	e.PATCH("/users/:id", editUser)
+	e.POST("/register", addUser)
+
+	u := e.Group("/users")
+
+	config := middleware.JWTConfig{
+		Claims:     &CustomClaims{},
+		SigningKey: []byte("secret"),
+	}
+
+	u.Use(middleware.JWTWithConfig(config))
+	u.GET("/all", getUsers)
+	u.GET("", getUser)
+	u.PATCH("", editUser)
 
 	e.Logger.Fatal(e.Start(":9000"))
 }
@@ -60,39 +79,51 @@ func hello(c echo.Context) error {
 
 func login(c echo.Context) error {
 	var request struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 	if err := c.Bind(&request); err != nil {
 		return c.JSON(http.StatusUnauthorized, "Email or password incorrect")
 	}
 
-	rows, err := dbCon.Database.Query("select email, password from users where email = ?", request.Email)
+	rows, err := dbCon.Database.Query("select id, name, email, password from users where email = ?", request.Email)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, ResponseJson{
-			Message: "Not Found",
+			Message: "Not Found Login",
 		})
 	}
 	defer rows.Close()
 
 	var (
-		email  string
+		id       int
+		email    string
+		name     string
 		password string
-		user User
+		user     User
 	)
 
 	for rows.Next() {
-		rows.Scan(&email, &password)
-		user = User{Email: email, Password: password}
+		rows.Scan(&id, &name, &email, &password)
+		user = User{
+			ID:       id,
+			Email:    email,
+			Name:     name,
+			Password: password,
+		}
 	}
 
 	if request.Email == user.Email && request.Password == user.Password {
-		token := jwt.New(jwt.SigningMethodHS256)
 
-		claims := token.Claims.(jwt.MapClaims)
-		claims["name"] = "Supachai Suthikeeree"
-		claims["email"] = "supano1995@gmail.com"
-		claims["exp"] = time.Now().Add(time.Hour).Unix()
+		claims := &CustomClaims{
+			user.ID,
+			user.Name,
+			user.Email,
+			jwt.StandardClaims{
+				ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			},
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 		t, err := token.SignedString([]byte("secret"))
 		if err != nil {
@@ -102,15 +133,17 @@ func login(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
 			"token": t,
 		})
-	} 
+	}
 
 	return c.JSON(http.StatusUnauthorized, "Email or password incorrect")
 }
 
 func getUser(c echo.Context) error {
 
+	jwtUser := c.Get("user").(*jwt.Token)
+	claims := jwtUser.Claims.(*CustomClaims)
 	var count int
-	rowCount, err := dbCon.Database.Query("select count(id) from users where id = ?", c.Param("id"))
+	rowCount, err := dbCon.Database.Query("select count(id) from users where id = ?", claims.ID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, ResponseJson{
 			Message: "Not Found",
@@ -129,7 +162,7 @@ func getUser(c echo.Context) error {
 		})
 	}
 
-	rows, err := dbCon.Database.Query("select id, name, email from users where id = ?", c.Param("id"))
+	rows, err := dbCon.Database.Query("select id, name, email from users where id = ?", claims.ID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, ResponseJson{
 			Message: "Not Found",
@@ -157,14 +190,13 @@ func getUser(c echo.Context) error {
 		Message: "Success",
 		Data:    &user,
 	})
-
 }
 
 func getUsers(c echo.Context) error {
 	rows, err := dbCon.Database.Query("select id, name, email, password from users")
 	if err != nil {
 		return c.JSON(http.StatusNotFound, ResponseJson{
-			Message: "Not Found",
+			Message: "Not Found 1",
 		})
 	}
 	defer rows.Close()
@@ -188,7 +220,7 @@ func getUsers(c echo.Context) error {
 
 	if len(users) == 0 {
 		return c.JSON(http.StatusNotFound, ResponseJson{
-			Message: "Not Found",
+			Message: "Not Found 2",
 		})
 	}
 
@@ -230,6 +262,10 @@ func addUser(c echo.Context) error {
 }
 
 func editUser(c echo.Context) error {
+
+	jwtUser := c.Get("user").(*jwt.Token)
+	claims := jwtUser.Claims.(*CustomClaims)
+
 	u := new(User)
 	if err := c.Bind(u); err != nil {
 		return err
@@ -238,7 +274,7 @@ func editUser(c echo.Context) error {
 	var (
 		err error
 	)
-	rows, err := dbCon.Database.Query("UPDATE users SET name = ? WHERE id = ?", u.Name, c.Param("id"))
+	rows, err := dbCon.Database.Query("UPDATE users SET name = ? WHERE id = ?", u.Name, claims.ID)
 	if err != nil {
 		return c.JSON(http.StatusOK, ResponseJsonSingle{
 			Message: "Error",
@@ -247,7 +283,7 @@ func editUser(c echo.Context) error {
 
 	defer rows.Close()
 
-	result, err := dbCon.Database.Query("SELECT id, name, email FROM users WHERE id = ?", c.Param("id"))
+	result, err := dbCon.Database.Query("SELECT id, name, email FROM users WHERE id = ?", claims.ID)
 
 	defer result.Close()
 
@@ -271,5 +307,4 @@ func editUser(c echo.Context) error {
 		Message: "Success",
 		Data:    &user,
 	})
-
 }
