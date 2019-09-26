@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -45,6 +44,10 @@ var dbCon DatabaseCon
 
 func main() {
 	e := echo.New()
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
+	}))
 
 	var err error
 	dbCon.Database, err = sql.Open("mysql", "root:q1w2e3r4@tcp(127.0.0.1:3306)/digithun_quiz")
@@ -58,7 +61,7 @@ func main() {
 	e.POST("/login", login)
 	e.POST("/register", addUser)
 
-	u := e.Group("/users")
+	u := e.Group("")
 
 	config := middleware.JWTConfig{
 		Claims:     &CustomClaims{},
@@ -66,9 +69,9 @@ func main() {
 	}
 
 	u.Use(middleware.JWTWithConfig(config))
-	u.GET("/all", getUsers)
-	u.GET("", getUser)
-	u.PATCH("", editUser)
+	u.GET("/users/all", getUsers)
+	u.GET("/users", getUser)
+	u.PATCH("/users", editUser)
 
 	e.Logger.Fatal(e.Start(":9000"))
 }
