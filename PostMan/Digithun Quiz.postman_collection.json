@@ -1,0 +1,195 @@
+{
+	"info": {
+		"_postman_id": "63d415ab-ebef-4dc6-9a65-fc44dff6d890",
+		"name": "Digithun Quiz",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "index",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:9000",
+					"host": [
+						"localhost"
+					],
+					"port": "9000"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add Users",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"name\": \"Supachai\",\n\t\"password\": \"q1w2e3r4\",\n\t\"email\": \"supano1995@gmail.com\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:9000/register",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Users",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibmFtZSI6ImpvaG4iLCJlbWFpbCI6InN1cGFubzE5OTVAZ21haWwuY29tIiwiZXhwIjoxNTY5NTAwMDIwfQ.oFGYFsBcSf8nqby9h032yu2DL3fahqn26RRg_EAnrQs",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:9000/users/all",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"users",
+						"all"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Uset by ID",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibmFtZSI6ImpvaG4iLCJlbWFpbCI6InN1cGFubzE5OTVAZ21haWwuY29tIiwiZXhwIjoxNTY5NDkzNTc1fQ.7m3PCN1uyxd_PadwT1kLf0Ge6mncYTGYc2dcnU9Wmto",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:9000/users",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"email\": \"supano1995@gmail.com\",\n\t\"password\": \"q1w2e3r4\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:9000/login",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Edit User by id",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InN1cGFubzE5OTVAZ21haWwuY29tIiwiZXhwIjoxNTY5NDI0OTYwLCJuYW1lIjoiU3VwYWNoYWkgU3V0aGlrZWVyZWUifQ.aC1KMkzohzHk5C2VTSu_CXNpGOLYoaDUIfgOpZ9sO2g",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"name\": \"john\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:9000/users/1",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"users",
+						"1"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}
