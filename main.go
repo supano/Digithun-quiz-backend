@@ -10,6 +10,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -115,7 +116,9 @@ func login(c echo.Context) error {
 		}
 	}
 
-	if request.Email == user.Email && request.Password == user.Password {
+	errPassword := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password))
+
+	if request.Email == user.Email && errPassword == nil {
 
 		claims := &CustomClaims{
 			user.ID,
@@ -246,7 +249,8 @@ func addUser(c echo.Context) error {
 		log.Fatal(err)
 	}
 
-	result, err := stmt.Exec(u.Name, u.Email, u.Password)
+	hash, _ := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	result, err := stmt.Exec(u.Name, u.Email, hash)
 	defer stmt.Close()
 
 	id, _ := result.LastInsertId()
